@@ -144,8 +144,19 @@ def export_crawl_result(crawl_id, format):
     
     if format == 'json':
         # For JSON, we can directly return the result data
-        response = make_response(jsonify(result))
-        response.headers['Content-Disposition'] = f'attachment; filename=crawl_{crawl_id}.json'
+        # Add timestamp and crawl ID to the export
+        export_data = {
+            'crawl_id': crawl_id,
+            'crawl_timestamp': crawl.timestamp.strftime('%Y-%m-%d %H:%M:%S') if crawl.timestamp else datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'export_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'crawl_url': crawl.url,
+            'crawl_instructions': crawl.instructions,
+            'data': result
+        }
+        
+        response = make_response(jsonify(export_data))
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response.headers['Content-Disposition'] = f'attachment; filename=crawl_{crawl_id}_{timestamp}.json'
         response.headers['Content-Type'] = 'application/json'
         return response
     
@@ -214,7 +225,8 @@ def export_crawl_result(crawl_id, format):
         
         # Create response
         response = make_response(csv_data.getvalue())
-        response.headers['Content-Disposition'] = f'attachment; filename=crawl_{crawl_id}.csv'
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        response.headers['Content-Disposition'] = f'attachment; filename=crawl_{crawl_id}_{timestamp}.csv'
         response.headers['Content-Type'] = 'text/csv'
         return response
 

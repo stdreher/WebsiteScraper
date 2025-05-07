@@ -57,6 +57,18 @@ A powerful Flask-based website crawler that allows you to extract and analyze co
 3. **Submit**: Click "Start Crawling" to begin the process
 4. **View Results**: Analyze the structured results including extracted text, links, and metadata
 5. **Access History**: View and revisit previous crawls from the history section
+6. **Export Data**: Download crawl results in CSV or JSON format for further analysis
+
+### Export Formats
+
+- **CSV Export**: Provides a well-structured, human-readable format with multiple sections:
+  - Crawl Information (URL, Date, Instructions)
+  - Site Metadata (Title, Description, Keywords)
+  - Crawl Statistics (Pages, Links, Text Length, Crawl Time)
+  - Links Discovered (URL, Text, Depth, Type, Status)
+  - Pages Content (URL, Title, Depth, Text Sample)
+
+- **JSON Export**: Provides the complete raw data structure with all crawled information, ideal for programmatic access and integration with other systems
 
 ## Project Structure
 
@@ -78,6 +90,8 @@ A powerful Flask-based website crawler that allows you to extract and analyze co
 - `POST /crawl`: Submit a URL and instructions for crawling
 - `GET /results`: View results of the most recent crawl
 - `GET /results/<crawl_id>`: View results of a specific crawl by ID
+- `GET /export/<crawl_id>/json`: Download crawl results as JSON file
+- `GET /export/<crawl_id>/csv`: Download crawl results as CSV file
 - `POST /api/check-url`: API endpoint to validate URL format
 
 ## Tips for Effective Crawling
