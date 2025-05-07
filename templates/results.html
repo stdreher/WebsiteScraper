@@ -1,0 +1,217 @@
+{% extends "layout.html" %}
+
+{% block title %}Crawl Results - {{ url }}{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Crawl Results</li>
+        </ol>
+    </nav>
+    <h2><i class="fas fa-chart-network me-2"></i>Crawl Results</h2>
+    <div class="url-path">
+        <i class="fas fa-link me-1"></i>{{ url }}
+    </div>
+    {% if instructions %}
+    <div class="mt-2 small text-muted">
+        <i class="fas fa-info-circle me-1"></i>Instructions: {{ instructions }}
+    </div>
+    {% endif %}
+</div>
+
+<div class="row">
+    <!-- Left column - Summary -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Site Info</h6>
+                    <p class="mb-1"><strong>Title:</strong> {{ result.metadata.title }}</p>
+                    {% if result.metadata.description %}
+                    <p class="mb-1"><strong>Description:</strong> {{ result.metadata.description }}</p>
+                    {% endif %}
+                    <p class="mb-1"><strong>Base URL:</strong> <a href="{{ result.metadata.base_url }}" target="_blank">{{ result.metadata.base_url }}</a></p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Crawl Stats</h6>
+                    <p class="mb-1"><strong>Pages Crawled:</strong> {{ result.metadata.pages_crawled }}</p>
+                    <p class="mb-1"><strong>Links Found:</strong> {{ result.links|length }}</p>
+                    <p class="mb-1"><strong>Words Extracted:</strong> {{ result.text.split()|length }}</p>
+                    <p class="mb-1"><strong>Crawl Time:</strong> {{ result.metadata.crawl_time }} seconds</p>
+                </div>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-info">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Crawler
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right column - Detailed results -->
+    <div class="col-lg-8">
+        <!-- Pages Overview -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Pages Overview</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="accordion" id="pagesAccordion">
+                    {% for page in result.page_data %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading{{ loop.index }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#collapse{{ loop.index }}" aria-expanded="false" 
+                                aria-controls="collapse{{ loop.index }}">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div class="text-truncate" style="max-width: 400px;">
+                                        <span class="badge bg-secondary me-2">{{ loop.index }}</span>
+                                        {{ page.title }}
+                                    </div>
+                                    <span class="badge bg-info">Depth: {{ page.depth }}</span>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ loop.index }}" class="accordion-collapse collapse" 
+                            aria-labelledby="heading{{ loop.index }}" data-bs-parent="#pagesAccordion">
+                            <div class="accordion-body">
+                                <p class="small text-muted url-path">{{ page.url }}</p>
+                                
+                                {% if page.description %}
+                                <div class="mb-2">
+                                    <strong>Description:</strong>
+                                    <p>{{ page.description }}</p>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mb-2">
+                                    <strong>Content Sample:</strong>
+                                    <p>{{ page.text_sample }}</p>
+                                </div>
+                                
+                                {% if page.headings and page.headings|length > 0 %}
+                                <div class="mb-2">
+                                    <strong>Headings Structure:</strong>
+                                    <ul class="list-unstyled ps-2">
+                                        {% for heading in page.headings %}
+                                        <li class="ms-{{ heading.level }}">
+                                            <span class="badge bg-secondary me-1">H{{ heading.level }}</span>
+                                            {{ heading.text }}
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                
+                                {% if page.images and page.images|length > 0 %}
+                                <div>
+                                    <strong>Images ({{ page.images|length }}):</strong>
+                                    <div class="row">
+                                        {% for img in page.images[:10] %}
+                                        <div class="col-lg-6">
+                                            <div class="text-truncate small">
+                                                <i class="fas fa-image me-1"></i>{{ img }}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if page.images|length > 10 %}
+                                        <div class="col-12">
+                                            <small class="text-muted">And {{ page.images|length - 10 }} more images...</small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Site Structure -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i>Site Structure</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Links discovered during crawling:</p>
+                
+                {% set depth_groups = {} %}
+                {% for link in result.links %}
+                    {% if link.depth not in depth_groups %}
+                        {% set _ = depth_groups.update({link.depth: []}) %}
+                    {% endif %}
+                    {% set _ = depth_groups[link.depth].append(link) %}
+                {% endfor %}
+                
+                <div class="accordion" id="linksAccordion">
+                    {% for depth, links in depth_groups.items() %}
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="depthHeading{{ depth }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#depthCollapse{{ depth }}" aria-expanded="false" 
+                                aria-controls="depthCollapse{{ depth }}">
+                                <span class="badge bg-info me-2">Depth {{ depth }}</span>
+                                {{ links|length }} Links
+                            </button>
+                        </h2>
+                        <div id="depthCollapse{{ depth }}" class="accordion-collapse collapse" 
+                            aria-labelledby="depthHeading{{ depth }}" data-bs-parent="#linksAccordion">
+                            <div class="accordion-body p-0">
+                                <div class="list-group list-group-flush">
+                                    {% for link in links %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <div class="text-truncate">
+                                                    {% if link.text %}
+                                                    <span class="fw-bold">{{ link.text }}</span>
+                                                    {% else %}
+                                                    <span class="fst-italic text-muted">No text</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="small text-muted text-truncate" style="max-width: 500px;">
+                                                    {{ link.url }}
+                                                </div>
+                                            </div>
+                                            <a href="{{ link.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Extracted Text -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-align-left me-2"></i>Extracted Text</h5>
+                <button class="btn btn-sm btn-outline-info expand-button" data-target="textContent">
+                    <i class="fas fa-chevron-down"></i> Show
+                </button>
+            </div>
+            <div class="card-body d-none" id="textContent">
+                <div class="result-scroll p-3 bg-dark rounded">
+                    <pre class="mb-0">{{ result.text }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

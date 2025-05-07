@@ -1,0 +1,106 @@
+/* Custom styles to complement Bootstrap's styling */
+
+/* Progress bar animation */
+@keyframes progress {
+    0% {
+        width: 0%;
+    }
+    100% {
+        width: 100%;
+    }
+}
+
+.crawl-progress {
+    animation: progress 30s linear;
+}
+
+/* Adjustments for the crawler results */
+.result-block {
+    border-left: 4px solid var(--bs-info);
+    padding-left: 15px;
+    margin-bottom: 20px;
+}
+
+.url-card {
+    transition: all 0.2s ease;
+}
+
+.url-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Highlight important sections */
+.highlight {
+    background-color: rgba(var(--bs-info-rgb), 0.1);
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+
+/* History items styling */
+.history-item {
+    padding: 0.75rem;
+    border-left: 3px solid var(--bs-secondary);
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.history-item:hover {
+    border-left-color: var(--bs-info);
+    background-color: rgba(var(--bs-info-rgb), 0.05);
+}
+
+/* Custom styling for code blocks in results */
+.code-block {
+    font-family: monospace;
+    background-color: var(--bs-dark);
+    border-radius: 4px;
+    padding: 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Breadcrumb styles for URL paths */
+.url-path {
+    font-size: 0.875rem;
+    color: var(--bs-secondary);
+    word-break: break-all;
+}
+
+/* Styling for meta tags display */
+.meta-tag {
+    display: inline-block;
+    background-color: rgba(var(--bs-secondary-rgb), 0.1);
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Make sure content doesn't overflow */
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Custom scrollbars for result sections */
+.result-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--bs-info) var(--bs-dark);
+}
+
+.result-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+
+.result-scroll::-webkit-scrollbar-track {
+    background: var(--bs-dark);
+}
+
+.result-scroll::-webkit-scrollbar-thumb {
+    background-color: var(--bs-info);
+    border-radius: 4px;
+}

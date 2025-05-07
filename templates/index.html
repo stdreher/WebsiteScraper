@@ -1,0 +1,136 @@
+{% extends "layout.html" %}
+
+{% block title %}Website Crawler - Crawl Any Website{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mb-5">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark">
+                <h3 class="mb-0"><i class="fas fa-spider me-2"></i>Website Crawler</h3>
+            </div>
+            <div class="card-body">
+                <form id="crawl-form" action="{{ url_for('start_crawl') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="url-input" class="form-label">Website URL</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-link"></i></span>
+                            <input type="url" class="form-control" id="url-input" name="url" 
+                                placeholder="https://example.com" required>
+                        </div>
+                        <div id="url-feedback" class="invalid-feedback">
+                            Please enter a valid URL
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="instructions-input" class="form-label">
+                            Custom Instructions
+                            <button type="button" class="btn btn-sm btn-link" id="instruction-help-button">
+                                <i class="fas fa-question-circle"></i>
+                            </button>
+                        </label>
+                        <textarea class="form-control" id="instructions-input" name="instructions" 
+                            rows="3" placeholder="Enter custom crawling instructions..."></textarea>
+                        <div id="instruction-help" class="mt-2 p-2 bg-dark rounded d-none">
+                            <h6>Instruction Examples:</h6>
+                            <ul class="mb-0 small">
+                                <li><code>depth: 3</code> - Crawl up to 3 levels deep (default: 2)</li>
+                                <li><code>pages: 30</code> - Crawl up to 30 pages (default: 20)</li>
+                                <li><code>images</code> - Collect image URLs</li>
+                                <li><code>headings</code> - Collect heading structure</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-info" id="submit-button">
+                            <i class="fas fa-search me-2"></i>Start Crawling
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if history %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Crawls</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for item in history %}
+                    <div class="list-group-item history-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1 text-truncate" style="max-width: 500px;">
+                                    <i class="fas fa-globe-americas me-2"></i>{{ item.url }}
+                                </h6>
+                                <p class="mb-1 small text-muted">
+                                    <i class="fas fa-clock me-1"></i>{{ item.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
+                                    {% if item.result_summary %}
+                                    <span class="ms-3">{{ item.result_summary }}</span>
+                                    {% endif %}
+                                </p>
+                                {% if item.instructions %}
+                                <p class="mb-0 small">
+                                    <i class="fas fa-info-circle me-1"></i>Instructions: {{ item.instructions }}
+                                </p>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <a href="#" class="btn btn-sm btn-outline-info history-link" 
+                                   data-url="{{ item.url }}" data-instructions="{{ item.instructions }}">
+                                    <i class="fas fa-redo-alt me-1"></i>Crawl Again
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row mt-5">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>About the Crawler</h5>
+            </div>
+            <div class="card-body">
+                <p>This website crawler allows you to:</p>
+                <ul>
+                    <li>Extract and analyze content from any website</li>
+                    <li>Customize crawl behavior with specific instructions</li>
+                    <li>View structured results with important page elements</li>
+                    <li>Track your crawl history</li>
+                </ul>
+                <p>The crawler respects robots.txt rules and implements rate limiting to be respectful to target websites.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header bg-dark">
+                <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Tips for Effective Crawling</h5>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li>Be specific with your URLs - include the full path for more targeted results</li>
+                    <li>Use custom instructions to tailor the crawl to your needs</li>
+                    <li>For large websites, limit the depth and number of pages</li>
+                    <li>Some websites may block or limit crawling - respect their terms of service</li>
+                    <li>For better text extraction, specify "headings" in the instructions</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
