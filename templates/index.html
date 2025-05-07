@@ -83,6 +83,9 @@
                                 {% endif %}
                             </div>
                             <div>
+                                <a href="{{ url_for('view_crawl_result', crawl_id=item.id) }}" class="btn btn-sm btn-outline-secondary me-1">
+                                    <i class="fas fa-eye me-1"></i>View Results
+                                </a>
                                 <a href="#" class="btn btn-sm btn-outline-info history-link" 
                                    data-url="{{ item.url }}" data-instructions="{{ item.instructions }}">
                                     <i class="fas fa-redo-alt me-1"></i>Crawl Again

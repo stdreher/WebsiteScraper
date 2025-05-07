@@ -22,7 +22,12 @@ app.secret_key = os.environ.get("SESSION_SECRET", "default-secret-key-for-develo
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)  # needed for url_for to generate with https
 
 # Configure the database
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///crawler.db")
+database_url = os.environ.get("DATABASE_URL")
+# Fix potential "postgres://" to "postgresql://" for SQLAlchemy 1.4+
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///crawler.db"
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
     "pool_pre_ping": True,
@@ -62,19 +67,18 @@ def start_crawl():
         # Perform the crawl
         result = crawl_website(url, instructions)
         
-        # Save to history
+        # Save to history with the full result data
         new_crawl = CrawlHistory(
             url=url,
             instructions=instructions,
             result_summary=f"Crawled {len(result['links'])} links, {len(result['text'].split())} words"
         )
+        new_crawl.set_result_data(result)  # Store the full result as JSON
         db.session.add(new_crawl)
         db.session.commit()
         
-        # Store result in session for display
-        session['crawl_result'] = result
-        session['crawled_url'] = url
-        session['crawl_instructions'] = instructions
+        # Store only the ID in session, not the whole result
+        session['crawl_id'] = new_crawl.id
         
         return redirect(url_for('results'))
     
@@ -86,15 +90,39 @@ def start_crawl():
 @app.route('/results')
 def results():
     """Display the results of a crawl"""
-    result = session.get('crawl_result')
-    url = session.get('crawled_url')
-    instructions = session.get('crawl_instructions')
+    crawl_id = session.get('crawl_id')
     
-    if not result:
+    if not crawl_id:
         flash('No crawl results available. Please perform a crawl first.', 'warning')
         return redirect(url_for('index'))
     
-    return render_template('results.html', result=result, url=url, instructions=instructions)
+    # Fetch the crawl history from the database
+    crawl = CrawlHistory.query.get(crawl_id)
+    
+    if not crawl:
+        flash('Crawl results not found. Please perform a new crawl.', 'warning')
+        return redirect(url_for('index'))
+    
+    # Get the result data from the crawl history
+    result = crawl.get_result_data()
+    
+    if not result:
+        flash('Crawl result data is missing. Please perform a new crawl.', 'warning')
+        return redirect(url_for('index'))
+    
+    return render_template('results.html', result=result, url=crawl.url, instructions=crawl.instructions)
+
+@app.route('/results/<int:crawl_id>')
+def view_crawl_result(crawl_id):
+    """View a specific crawl result from history"""
+    crawl = CrawlHistory.query.get_or_404(crawl_id)
+    result = crawl.get_result_data()
+    
+    if not result:
+        flash('Result data for this crawl is not available.', 'warning')
+        return redirect(url_for('index'))
+    
+    return render_template('results.html', result=result, url=crawl.url, instructions=crawl.instructions)
 
 @app.route('/api/check-url', methods=['POST'])
 def check_url():
@@ -105,8 +133,11 @@ def check_url():
     is_valid = validate_url(url)
     return jsonify({'valid': is_valid})
 
-# Create database tables
+# Create or update database tables
 with app.app_context():
+    # We need to drop and recreate the table to add the new column
+    # Only do this in development, in production you'd use migrations
+    db.drop_all()
     db.create_all()
 
 if __name__ == '__main__':
