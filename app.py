@@ -1,6 +1,9 @@
 import os
+import csv
 import logging
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from io import StringIO
+from datetime import datetime
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, make_response
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -110,7 +113,7 @@ def results():
         flash('Crawl result data is missing. Please perform a new crawl.', 'warning')
         return redirect(url_for('index'))
     
-    return render_template('results.html', result=result, url=crawl.url, instructions=crawl.instructions)
+    return render_template('results.html', result=result, url=crawl.url, instructions=crawl.instructions, crawl_id=crawl_id)
 
 @app.route('/results/<int:crawl_id>')
 def view_crawl_result(crawl_id):
@@ -122,7 +125,98 @@ def view_crawl_result(crawl_id):
         flash('Result data for this crawl is not available.', 'warning')
         return redirect(url_for('index'))
     
-    return render_template('results.html', result=result, url=crawl.url, instructions=crawl.instructions)
+    return render_template('results.html', result=result, url=crawl.url, instructions=crawl.instructions, crawl_id=crawl_id)
+
+@app.route('/export/<int:crawl_id>/<format>')
+def export_crawl_result(crawl_id, format):
+    """Export crawl results as CSV or JSON"""
+    if format not in ['csv', 'json']:
+        flash('Invalid export format. Please choose CSV or JSON.', 'danger')
+        return redirect(url_for('index'))
+    
+    # Get the crawl data
+    crawl = CrawlHistory.query.get_or_404(crawl_id)
+    result = crawl.get_result_data()
+    
+    if not result:
+        flash('Result data for this crawl is not available.', 'warning')
+        return redirect(url_for('index'))
+    
+    if format == 'json':
+        # For JSON, we can directly return the result data
+        response = make_response(jsonify(result))
+        response.headers['Content-Disposition'] = f'attachment; filename=crawl_{crawl_id}.json'
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    
+    elif format == 'csv':
+        # For CSV, we need to convert the data structure to a flat format
+        csv_data = StringIO()
+        writer = csv.writer(csv_data)
+        
+        # Write crawl information
+        writer.writerow(['Crawl Information'])
+        writer.writerow(['URL', crawl.url])
+        writer.writerow(['Date', datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+        writer.writerow(['Instructions', crawl.instructions or 'None'])
+        
+        # Site metadata section
+        writer.writerow([''])
+        writer.writerow(['Site Metadata'])
+        writer.writerow(['Title', result.get('metadata', {}).get('title', 'No Title')])
+        writer.writerow(['Description', result.get('metadata', {}).get('description', 'No Description')])
+        if 'metadata' in result and 'keywords' in result['metadata']:
+            writer.writerow(['Keywords', ', '.join(result['metadata'].get('keywords', []))])
+        
+        # Crawl statistics section
+        writer.writerow([''])
+        writer.writerow(['Crawl Statistics'])
+        writer.writerow(['Pages Crawled', result.get('metadata', {}).get('pages_crawled', 0)])
+        writer.writerow(['Total Links', len(result.get('links', []))])
+        writer.writerow(['Text Length (characters)', len(result.get('text', ''))])
+        writer.writerow(['Text Length (words)', len(result.get('text', '').split())])
+        writer.writerow(['Crawl Time (seconds)', result.get('metadata', {}).get('crawl_time', 0)])
+        
+        # Links section
+        writer.writerow([''])
+        writer.writerow(['Links Discovered'])
+        writer.writerow(['URL', 'Link Text', 'Depth', 'Type', 'Status'])
+        
+        for link in result.get('links', []):
+            writer.writerow([
+                link.get('url', ''),
+                link.get('text', '').replace('\n', ' ').strip(),
+                link.get('depth', ''),
+                link.get('type', 'link'),
+                link.get('status', '')
+            ])
+        
+        # Page data section if available
+        if 'page_data' in result and result['page_data']:
+            writer.writerow([''])
+            writer.writerow(['Pages Content'])
+            writer.writerow(['URL', 'Title', 'Depth', 'Text Sample'])
+            
+            for page in result.get('page_data', []):
+                text_sample = page.get('text_sample', '')
+                if text_sample:
+                    # Clean up text sample for CSV
+                    text_sample = text_sample.replace('\n', ' ').replace('\r', '').strip()
+                    if len(text_sample) > 200:
+                        text_sample = text_sample[:197] + '...'
+                
+                writer.writerow([
+                    page.get('url', ''),
+                    page.get('title', 'No Title'),
+                    page.get('depth', 0),
+                    text_sample
+                ])
+        
+        # Create response
+        response = make_response(csv_data.getvalue())
+        response.headers['Content-Disposition'] = f'attachment; filename=crawl_{crawl_id}.csv'
+        response.headers['Content-Type'] = 'text/csv'
+        return response
 
 @app.route('/api/check-url', methods=['POST'])
 def check_url():
